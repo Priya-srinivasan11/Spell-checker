@@ -1,0 +1,127 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#define ALPHABET_SIZE 26
+#define MAX_SUGGESTIONS 5
+int suggestionCount = 0;
+
+// Trie node structure
+typedef struct TreeNode {
+    struct TreeNode* children[ALPHABET_SIZE];
+    bool isEndOfWord;
+} TreeNode;
+
+// Create a new trie node
+TreeNode* createNode() {
+    TreeNode* node = (TreeNode*)malloc(sizeof(TreeNode));
+    node->isEndOfWord = false;
+    for (int i = 0; i < ALPHABET_SIZE; i++)
+        node->children[i] = NULL;
+    return node;
+}
+
+// Insert a word into the trie
+void insert(TreeNode* root, const char* word) {
+    TreeNode* current = root;
+    for (int i = 0; word[i] != '\0'; i++) {
+        int index = word[i] - 'a';
+        if (index >= 0 && index < ALPHABET_SIZE) {
+            if (current->children[index] == NULL)
+                current->children[index] = createNode();
+            current = current->children[index];
+        }
+    }
+    current->isEndOfWord = true;
+}
+
+// Search for a word in the trie
+bool search(TreeNode* root, const char* word) {
+    TreeNode* current = root;
+    for (int i = 0; word[i] != '\0'; i++) {
+        int index = word[i] - 'a';
+        if (index < 0 || index >= ALPHABET_SIZE || current->children[index] == NULL)
+            return false;
+        current = current->children[index];
+    }
+    return current->isEndOfWord;
+}
+
+// Suggest words starting from the matched prefix node
+void suggestWords(TreeNode* root, char* prefix, int level) {
+    if (suggestionCount >= MAX_SUGGESTIONS) return;
+
+    if (root->isEndOfWord) {
+        prefix[level] = '\0';
+        printf("Did you mean: %s?\n", prefix);
+        suggestionCount++;
+    }
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        if (root->children[i]) {
+            prefix[level] = 'a' + i;
+            suggestWords(root->children[i], prefix, level + 1);
+        }
+    }
+}
+
+// Search for the prefix node in the trie
+TreeNode* searchPrefixNode(TreeNode* root, const char* prefix) {
+    TreeNode* current = root;
+    for (int i = 0; prefix[i] != '\0'; i++) {
+        int index = prefix[i] - 'a';
+        if (index < 0 || index >= ALPHABET_SIZE || !current->children[index])
+            return NULL;
+        current = current->children[index];
+    }
+    return current;
+}
+
+int main() {
+    TreeNode* root = createNode();
+
+    // Expanded dictionary with ~10-15 words per letter
+    const char* dictionary[] = {
+        "apple", "apply", "apricot", "angle", "animal", "anchor", "antique", "answer", "arrive", "artist", "aspect", "assemble", "assign","banana", "basket", "battle", "beach", "beauty", "before", "believe", "benefit", "between", "bicycle", "biology", "bottle", "branch", "breath", "cat", "car", "carry", "cartoon", "castle", "catch", "cause", "caution", "celebrate", "center", "change", "charge", "chase", "chicken", "dog", "dance", "danger", "damage", "decide", "declare", "defend", "delay", "deliver", "demand", "describe", "desert", "design", "destroy","elephant", "eager", "early", "earth", "east", "easy", "echo", "economy", "educate", "effect", "effort", "either", "electric", "elevate","english","engineer","fish", "face", "fact", "fair", "fall", "family", "famous", "fashion", "fast", "father", "fear", "feature", "fence", "festival","goat", "gain", "game", "garden", "gas", "gate", "gather", "general", "gentle", "gesture", "ghost", "giant", "gift", "girl","horse", "habit", "hair", "half", "hammer", "hand", "handle", "happy", "harbor", "hard", "harm", "hat", "hate", "have","ice", "idea", "identify", "ignore", "ill", "image", "imagine", "impact", "improve", "include", "income", "increase", "industry", "inform", "jungle", "join", "joke", "journey", "judge", "juice", "jump", "just", "jewel", "job", "joy", "jazz", "jeans", "kangaroo", "keen", "keep", "kettle", "key", "kick", "kid", "kill", "kind", "king", "kiss", "kitchen", "kite", "knee", "lion", "lake", "land", "large", "last", "laugh", "law", "layer", "lead", "learn", "leave", "legal", "lesson", "letter", "monkey", "machine", "magic", "magnet", "main", "major", "make", "male", "mall", "man", "manage", "market", "mask", "mass","nose", "name", "narrow", "nation", "native", "natural", "nature", "near", "nearly", "necessary", "neck", "need", "negative", "neighbor","orange", "object", "observe", "obtain", "occasion", "occur", "ocean", "offer", "office", "often", "oil", "old", "only", "open","peach", "page", "pain", "paint", "pair", "palace", "pan", "paper", "park", "part", "party", "pass", "past", "path", "queen", "question", "quick", "quiet", "quit", "quote", "quilt", "quake", "quality", "queue", "rabbit", "race", "radio", "rain", "raise", "range", "rate", "reach", "read", "ready", "real", "reason", "record", "reduce", "science", "scientist", "scissors", "school", "screen", "search", "season", "seat", "second", "secret", "section", "security", "select", "self", "tiger", "table", "take", "talk", "task", "taste", "teach", "team", "tear", "telephone", "tell", "ten", "term", "test",  "umbrella", "unable", "uncle", "under", "undo", "uniform", "unit", "unite", "universe", "unknown", "unlock", "until", "upset", "urban", "violet", "vacation", "valid", "value", "vapor", "various", "vast", "vegetable", "vehicle", "verse", "very", "victory", "video", "view", "watermelon", "walk", "wall", "want", "warm", "warn", "wash", "waste", "watch", "water", "wave", "way", "weak", "wealth", "xylophone", "x-ray", "xerox", "xenon", "xylem", "yellow", "yard", "yawn", "year", "yes", "yesterday", "young", "youth", "yield", "yummy","zebra", "zero", "zone", "zoo", "zoom", "zeal", "zigzag", "zipper", "zinc", "zest"
+    };
+
+    int wordCount = sizeof(dictionary) / sizeof(dictionary[0]);
+
+    // Insert all dictionary words into the trie
+    for (int i = 0; i < wordCount; i++) {
+        insert(root, dictionary[i]);
+    }
+
+    char word[50];
+    printf("Enter a word: ");
+    scanf("%49s", word);  // safer to limit input length
+
+    // Convert input to lowercase (to match dictionary)
+    for (int i = 0; word[i]; i++) {
+        if (word[i] >= 'A' && word[i] <= 'Z') {
+            word[i] = word[i] - 'A' + 'a';
+        }
+    }
+
+    if (search(root, word)) {
+        printf("'%s' is spelled correctly.\n", word);
+    } else {
+        printf("'%s' is NOT in the dictionary.\n", word);
+        printf("Suggestions:\n");
+
+        char prefix[50];
+        strcpy(prefix, word);
+        suggestionCount = 0;
+        TreeNode* prefixNode = searchPrefixNode(root, prefix);
+
+        if (prefixNode) {
+            suggestWords(prefixNode, prefix, strlen(prefix));
+        } else {
+            printf("No suggestions found.\n");
+        }
+    }
+
+    
+    return 0;
+}
